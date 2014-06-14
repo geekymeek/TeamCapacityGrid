@@ -1,76 +1,93 @@
-(function () {
-var Ext = window.Ext4 || window.Ext;
-var appAutoScroll = Ext.isIE7 || Ext.isIE8;
-var gridAutoScroll = !appAutoScroll;
-var app;
+// IMPORTANT NOTE: If you rebuild this app, you must add "var app;" to the new 
+// deploy/App...html files just above "Rally.onReady(function () {"
+//
 Ext.define('CustomApp', {
-    extend: 'Rally.app.App',
-	items:{ html:'<h1>Goto Track->Team Status Page to enter initial Capacities</h1>'},
-	autoScroll: appAutoScroll,
-
-	launch: function () {
-		app = this;
-		app.iPicker = app.add({
-			items: [{
-				xtype: 'rallyiterationcombobox',
-				limit: Infinity,
-				storeConfig: {
-					listeners: {
-						load: function(store, records){
-//							console.log(records);
-						}
-					}
-				},
-				listeners: {
-					select: function(combobox) {
-//						console.log('processing: ' + combobox.getRecord().get("Name"));
-						
-						app._loadGrid(combobox.getRecord().get("ObjectID"));
-					},
-					ready: function(combobox) {
-						app._loadGrid(combobox.getRecord().get("ObjectID"));
-					}
-				}    
-
-			}]
-		});
-	},	
-		
-	_loadGrid: function (iName) {
-		var context = app.getContext();
+    extend: 'Rally.app.TimeboxScopedApp',
+    componentCls: 'app',
+    scopeType: 'iteration',
+	html:'<div title="Capacity records are only created from the Team Status page. Making an initial entry there allows the display and edit here."><h1>Goto Track->Team Status Page to enter initial Capacities</h1></div>',
+    comboboxConfig: {
+        fieldLabel: '<div align="right"><input type="button" value="Refresh" onClick="javascript: app._loadGrid();"/> &nbsp;&nbsp;&nbsp;&nbsp;Select an Iteration:</div>',
+        labelWidth: 200,
+        width: 500
+    },
+	addContent: function() {
+		this._showMask('Loading');
+		this._loadGrid();
+	},
+	onScopeChange: function() {
+		this._showMask('Updating');
+		this._loadGrid();
+	},
+	_loadGrid: function () {
+		var context = this.getContext();
 		pageSize = 25;
-		fetch = 'User,Capacity,TaskEstimates';
-		columns = app._getColumns(fetch);
-		if (app.mygrid) app.mygrid.destroy();
-		app.mygrid = app.add({
+		fetch = 'User,Capacity,TaskEstimates,Load';
+		iOID = this.getContext().getTimeboxScope().getRecord().get("ObjectID");
+		if ( this._myGrid ) { this._myGrid.destroy(); }
+        this._myGrid = Ext.create("Rally.ui.grid.Grid", {
 			xtype: 'rallygrid',
 			layout: 'fit',
-			columnCfgs: columns,
 			enableColumnHide: false,
 			showRowActionsColumn: false,
-//			enableBulkEdit: context.isFeatureEnabled("EXT4_GRID_BULK_EDIT"),
 			enableEditing: true,
-			autoScroll: gridAutoScroll,
-//			plugins: app._getPlugins(columns),
-			context: app.getContext(),
+			context: this.getContext(),
 			storeConfig: {
 				fetch: fetch,
 				model: 'UserIterationCapacity',
-				filters: app._getFilters(iName),
+				filters: this._getFilters(iOID),
 				pageSize: pageSize,
-//				sorters: Rally.data.util.Sorter.sorters(app.getSetting('order')),
 				listeners: {
-					load: app._updateAppContainerSize,
-					scope: app
-				}
+					datachanged: function() {
+//						console.log("datachange");
+//						this._loadGrid();
+					},
+					scope: this
+				},
+				sorters: [
+					{ property: 'User', direction: 'ASC' }
+				]
 			},
+			columnCfgs: [
+				{
+					text: 'User',
+					dataIndex: 'User',
+					flex: 1
+				},
+				{
+					text: 'Capacity',
+					dataIndex: 'Capacity'
+				},
+				{
+					text: 'Task Estimates',
+					dataIndex: 'TaskEstimates'
+				},
+				{
+					text: 'Load',
+					xtype: 'templatecolumn',
+					tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
+						percentDoneName: 'Load',
+						calculateColorFn: function(recordData) {
+							if (recordData.Load < 0.8) {
+								colVal = "#B2E3B6"; // Green
+							} else if (recordData.Load < 1.0) {
+								colVal = "#FBDE98"; // Orange
+							} else {
+								colVal = "#FCB5B1"; // Red
+							}
+						return colVal;
+						}
+					})
+				}
+			],
 			pagingToolbarCfg: {
 				pageSizes: [pageSize]
 			}
 		});
-//		console.log('loading grid');
-		},
-
+		this._hideMask();
+		app = this;
+		this.add(this._myGrid);
+	},
 	_getFilters: function (iName) {
 		var filters = [];
 		filters.push({
@@ -83,44 +100,15 @@ Ext.define('CustomApp', {
 			operator: '>',
 			value: 0
 		});
-
-// console.log('iName=' + iName);
 		return filters;
 	},
-
-	_getFetchOnlyFields: function () {
-		return ['PercentComplete'];
-	},
-
-	_updateAppContainerSize: function (store,data) {
-console.log(data);
-		if (app.mygrid.appContainer) {
-			var grid = app.mygrid.down('rallygrid');
-			grid.el.setHeight('auto');
-			grid.body.setHeight('auto');
-			grid.view.el.setHeight('auto');
-			app.setSize({height: grid.getHeight() + _.reduce(grid.getDockedItems(), function (acc, item) {
-				return acc + item.getHeight() + item.el.getMargin('tb');
-			}, 0)});
-			app.appContainer.setPanelHeightToAppHeight();
+	_showMask: function(msg) {
+		if ( this.getEl() ) { 
+			this.getEl().unmask();
+			this.getEl().mask(msg);
 		}
 	},
-
-	_getColumns: function (fetch) {
-		if (fetch) {
-			return Ext.Array.difference(fetch.split(','), app._getFetchOnlyFields());
-		}
-		return [];
+	_hideMask: function() {
+		this.getEl().unmask();
 	}
-
-//	_getPlugins: function (columns) {
-//		var plugins = [];
-//
-//		if (Ext.Array.intersect(columns, ['PercentDone', 'PercentDoneByStoryPlanEstimate', 'PercentDoneByStoryCount']).length > 0) {
-//			plugins.push('rallypercentdonepopoverplugin');
-//		}
-//
-//		return plugins;
-//	}
 });
-})();
