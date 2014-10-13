@@ -6,8 +6,8 @@
     <script type="text/javascript" src="/apps/2.0rc3/sdk.js"></script>
 
     <script type="text/javascript">
-    	var app;
         Rally.onReady(function () {
+        	var app;
                 // IMPORTANT NOTE: If you rebuild this app, you must add "var app;" to the new 
 // deploy/App...html files just above "Rally.onReady(function () {"
 //
@@ -26,13 +26,13 @@ Ext.define('CustomApp', {
         fieldLabel: 'Select an Iteration:</div>',
         width: 400
     },
-	addContent: function() {
-		this._showMask('Loading');
-		this._loadGrid();
-	},
 	onScopeChange: function() {
-		this._showMask('Updating');
-		this._loadGrid();
+		if (this.getContext().getTimeboxScope().getRecord() === null) {
+			alert("You must specify a valid Iteration/Sprint. Unscheduled is not supported.");
+		} else {
+			this._showMask('Updating');
+			this._loadGrid();
+		}
 	},
 	_loadGrid: function () {
 		var context = this.getContext();

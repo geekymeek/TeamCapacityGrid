@@ -16,13 +16,13 @@ Ext.define('CustomApp', {
         fieldLabel: 'Select an Iteration:</div>',
         width: 400
     },
-	addContent: function() {
-		this._showMask('Loading');
-		this._loadGrid();
-	},
 	onScopeChange: function() {
-		this._showMask('Updating');
-		this._loadGrid();
+		if (this.getContext().getTimeboxScope().getRecord() === null) {
+			alert("You must specify a valid Iteration/Sprint. Unscheduled is not supported.");
+		} else {
+			this._showMask('Updating');
+			this._loadGrid();
+		}
 	},
 	_loadGrid: function () {
 		var context = this.getContext();
