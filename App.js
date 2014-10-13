@@ -5,7 +5,13 @@ Ext.define('CustomApp', {
     extend: 'Rally.app.TimeboxScopedApp',
     componentCls: 'app',
     scopeType: 'iteration',
-	html:'<div title="Capacity records are only created from the Team Status page. Making an initial entry there allows the display and edit here."><h1 style="text-align:left;float:left;">Goto Track->Team Status Page to enter initial Capacities</h1><input type="button" style="text-align:right;float:right;" value="Refresh" onClick="javascript: app._loadGrid();"/></div>',
+	html:'<table><tr><td>' +
+	'<div title="Create a task and assign it with estimate or enter initial capacity on the Team Status page.">' +
+	'<b style="text-align:left;float:left;">' +
+	'Create and assign a task with estimate or goto Track->Team Status to enter capacities' +
+	'</b></div></td><td><div>' +
+	'<input type="button" style="text-align:right;float:right;" value="Refresh" onClick="javascript: app._loadGrid();"/></div>' +
+	'</td></tr></table>',
     comboboxConfig: {
         fieldLabel: 'Select an Iteration:</div>',
         width: 400
