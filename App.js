@@ -94,11 +94,11 @@ Ext.define('CustomApp', {
 			operator: '=',
 			value: iName
 		});
-		filters.push({
-			property: 'Capacity',
-			operator: '>',
-			value: 0
-		});
+//		filters.push({
+//			property: 'Capacity',
+//			operator: '>',
+//			value: 0
+//		});
 		return filters;
 	},
 	_showMask: function(msg) {

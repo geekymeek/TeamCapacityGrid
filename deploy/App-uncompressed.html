@@ -6,6 +6,7 @@
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
 
     <script type="text/javascript">
+    	var app;
         Rally.onReady(function () {
                 // IMPORTANT NOTE: If you rebuild this app, you must add "var app;" to the new 
 // deploy/App...html files just above "Rally.onReady(function () {"
@@ -103,11 +104,11 @@ Ext.define('CustomApp', {
 			operator: '=',
 			value: iName
 		});
-		filters.push({
-			property: 'Capacity',
-			operator: '>',
-			value: 0
-		});
+//		filters.push({
+//			property: 'Capacity',
+//			operator: '>',
+//			value: 0
+//		});
 		return filters;
 	},
 	_showMask: function(msg) {
