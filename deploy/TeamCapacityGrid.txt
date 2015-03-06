@@ -3,14 +3,13 @@
 <head>
     <title>TeamCapacityGrid</title>
 
-    <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
+    <script type="text/javascript" src="/apps/2.0rc3/sdk.js"></script>
 
     <script type="text/javascript">
-	    var app;
         Rally.onReady(function () {
+        	var app;
                 // IMPORTANT NOTE: If you rebuild this app, you must add "var app;" to the new 
 // deploy/App...html files just above "Rally.onReady(function () {"
-// Source Code Here: https://github.com/RallyRonnie/TeamCapacityGrid
 //
 Ext.define('CustomApp', {
     extend: 'Rally.app.TimeboxScopedApp',
@@ -140,11 +139,10 @@ Ext.define('CustomApp', {
 
     <style type="text/css">
         .app {
-  /* Add app styles here */
+     /* Add app styles here */
 }
 
     </style>
 </head>
-<body>
-</body>
+<body></body>
 </html>
