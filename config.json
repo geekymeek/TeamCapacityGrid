@@ -1,12 +1,12 @@
 {
-   "name": "TeamCapacityGrid",
-   "className": "CustomApp",
-   "server": "https://rally1.rallydev.com",
-   "sdk": "2.0",
-   "javascript": [
-      "App.js"
-   ],
-   "css": [
-      "app.css"
-   ]
+    "name": "TeamCapacityGrid",
+    "className": "CustomApp",
+    "server": "https://rally1.rallydev.com",
+    "sdk": "2.0",
+    "javascript": [
+        "App.js"
+    ],
+    "css": [
+        "app.css"
+    ]
 }
