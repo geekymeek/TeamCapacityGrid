@@ -33,7 +33,7 @@ Ext.define('CustomApp', {
           });
           capacityStore.load().then({
               success: function(capacities) {
-                debugger;
+                //debugger;
                 console.log('capacityStore.load promise success');
                 var storyStore = Ext.create('Rally.data.wsapi.Store', {
                       model: 'User Story',
@@ -44,142 +44,186 @@ Ext.define('CustomApp', {
                       }],
                       pageSize: 200
                 });
+
                 storyStore.load().then({
                   success: function(stories) {
                     console.log('storyStore load promise success');
                     // console.log(stories);
                     //debugger;
 
-                    // an simple object to hold point totals
-                    var pointTotals = {};
+                    //define a custom data model
+                    // Ext.define('CustomCapacity', {
+                    //   extend: 'Rally.data.model',
+                    //   fields: [
+                    //     {name: 'name', type: 'string'},
+                    //     {name: 'points', type: 'int', defaultValue: 0},
+                    //     {name: 'capacity', type: 'int', defaultValue: 0},
+                    //     {name: 'load', type: 'float', defaultValue: 0}
+                    //   ]
+                    // });
 
-                    //define a custom data model and store, eventually to be used to back a UI object
-                    Ext.define('customCapacity', {
-                      extend: 'Ext.data.model',
-                      fields: [
-                        {name: 'Owner', type: 'string'},
-                        {name: 'PointEstimates', type: 'int', defaultValue: 0},
-                        {name: 'PointCapacity', type: 'int', defaultValue: 0},
-                        {name: 'PointLoad', type: 'float', defaultValue: 0}
-                      ],
-                      idProperty: 'Owner'
-                    });
-                    var customStore = Ext.create('Rally.data.custom.Store', {
-                      model: 'customCapacity'
-                    });
+                    // define a store for the custom model
+                    // var customStore = Ext.create('Rally.data.custom.Store', {
+                    //   model: 'CustomCapacity'
+                    // });
 
+                    // an array to hold custom user iteration capacity objects
+                    var pointTotals = [];
                     var index;
                     _.each(stories, function(story) {
-                      var ownerName, pointval;
+
+                      //nomalize the owner name
+                      var ownerName;
                       if (story.get('Owner') === null) {
                           ownerName = 'no owner';
                       } else {
                           ownerName = story.get('Owner')._refObjectName;
                       }
+
+                      //normalize the point value
+                      var pointval;
                       if (story.get('PlanEstimate') > 0) {
                           pointval = story.get('PlanEstimate');
                       } else {
                           pointval = 0;
                       }
-                      if (!pointTotals[ownerName]) {
-                          pointTotals[ownerName] = pointval;
-                      } else {
-                          pointTotals[ownerName] += pointval;
-                      }
 
-                      //see if model/record exists in store
-                      debugger;
-                      var record = customStore.findBy(function(record,ownerName){
-                        return record.get('Owner') === ownerName;
+                      //debugger;
+
+                      //find c_uic obj in array by ownerName
+                      var c_uic = pointTotals.find(function findOwner(pointTotal){
+                        return (pointTotal.name === ownerName);
                       });
-                      if (record !== -1) {
-                        //get and update the model/record
-                        points = record.get('PointEstimates') + pointval;
-                        record.set('PointEstimates', points);
+                      if (c_uic === undefined) {
+                        //add new c_uic obj to array
+                        c_uic = new Object();
+                        c_uic.name = ownerName;
+                        c_uic.pointEst = pointval;
+                        c_uic.taskEst = 0;
+                        c_uic.capacityHrs = 0;
+                        c_uic.capacityPts = 0;
+                        c_uic.pointLoad = 0.01;
+                        c_uic.taskLoad = 0.01;
+                        pointTotals.push(c_uic);
                       } else {
-                        //add the model/record to the store
-                        record = customStore.add({
-                          Owner: ownerName,
-                          PointEstimates: pointval,
-                          PointCapacity: '0',
-                          PointLoad: '0'
-                        });
+                        //update c_uic obj with new point total
+                          c_uic.pointEst += pointval;
                       }
                     });
-                    debugger;
-                    console.log(customStore);
+                    // end _.each
+                    console.log(pointTotals);
+
+                    pointTotals.forEach(function(currentValue){
+                      //see if model/record exists in rally capacity store using findBy
+                      //debugger;
+                      var result = capacityStore.findBy(function(record) {
+                        if(record.get('User')._refObjectName === currentValue.name) {
+                          return true;
+                        } else {
+                          return false;
+                        }
+                      });
+                      if (result !== -1) { //result contains index of record in store
+                        currentValue.capacityHrs = capacityStore.getAt(result).get('Capacity');
+                        currentValue.taskEst = capacityStore.getAt(result).get('TaskEstimates');
+                        currentValue.taskLoad = capacityStore.getAt(result).get('Load');
+                        currentValue.capacityPts = Ext.util.Format.round(capacityStore.getAt(result).get('Capacity') / 6, 1);
+                        currentValue.pointLoad = (currentValue.pointEst * 6) / capacityStore.getAt(result).get('Capacity');
+                      }
+                    });
+                    //debugger;
+                    console.log(pointTotals);
+
 
                     //now setup the display object
-                    var gridrecords = _.map(pointTotals, function(pointTotal) {
-                        return Ext.apply({
-                            PointEstimates: pointTotals[capacity.get('User')._refObjectName],
-                            PointLoad: (pointTotals[capacity.get('User')._refObjectName] * 6) / capacity.get('Capacity'),
-                            UserName: capacity.get('User')._refObjectName,
-                            PointCapacity: Ext.util.Format.round(capacity.get('Capacity') / 6, 1)
-                        }, capacity.getData());
-                    });
+                    // var gridrecords = _.map(pointTotals, function(pointTotal) {
+                    //     return Ext.apply({
+                    //         PointEstimates: pointTotals[capacity.get('User')._refObjectName],
+                    //         PointLoad: (pointTotals[capacity.get('User')._refObjectName] * 6) / capacity.get('Capacity'),
+                    //         UserName: capacity.get('User')._refObjectName,
+                    //         PointCapacity: Ext.util.Format.round(capacity.get('Capacity') / 6, 1)
+                    //     }, capacity.getData());
+                    // });
                     // console.log(gridrecords);
                     if (this._myGrid) {
                         this._myGrid.destroy();
                     }
+                    //debugger;
+                    var cstore = Ext.create('Rally.data.custom.Store', {
+                      data: pointTotals
+                    //     fields: [
+                    //           {name: 'name', type: 'string'},
+                    //           {name: 'pointEst', type: 'int'},
+                    //           {name: 'taskEst', type: 'int'},
+                    //           {name: 'capacityHrs', type: 'int'},
+                    //           {name: 'capacityPts', type: 'float'},
+                    //           {name: 'taskLoad', type: 'float'},
+                    //           {name: 'pointLoad', type: 'float'},
+                    //     ]
+                    });
+                    cstore.loadData(pointTotals);
+                    console.log(cstore);
+                    debugger;
                     this._myGrid = Ext.create('Rally.ui.grid.Grid', {
                         xtype: 'rallygrid',
-                        store: Ext.create('Rally.data.custom.Store', {
-                            data: gridrecords
-                        }),
+                        store: cstore,
                         showRowActionsColumn: false,
                         columnCfgs: [{
                             text: 'User',
-                            dataIndex: 'UserName',
+                            dataIndex: 'name',
                         }, {
-                            text: 'Point Load',
+                            text: 'Point Est',
+                            dataindex: 'pointEst',
                             width: 60,
                             align: 'center',
-                            xtype: 'templatecolumn',
-                            tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
-                                percentDoneName: 'PointLoad',
-                                calculateColorFn: function(recordData) {
-                                    var loadval = recordData.PointLoad;
-                                    if (loadval < 0.8) {
-                                        colVal = '#B2E3B6'; // Green
-                                    } else if (loadval <= 1.0) {
-                                        colVal = '#006600'; // Dark Green
-                                    } else if (loadval < 1.25) {
-                                        colVal = '#FCB5B1'; // Red
-                                    } else {
-                                        colVal = '#f61509'; // dark Red
-                                    }
-                                    return colVal;
-                                },
-                                generateLabelTextFn: function(recordData) {
-                                  return recordData.PointEstimates + ' / ' + recordData.PointCapacity;
-                                }
-                            })
-                        }, {
-                            text: 'Task Est Load',
-                            width: 60,
-                            align: 'center',
-                            xtype: 'templatecolumn',
-                            tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
-                                percentDoneName: 'Load',
-                                calculateColorFn: function(recordData) {
-                                    var loadval = recordData.Load;
-                                    if (loadval < 0.8) {
-                                        colVal = '#B2E3B6'; // Green
-                                    } else if (loadval <= 1.0) {
-                                        colVal = '#006600'; // Dark Green
-                                    } else if (loadval < 1.25) {
-                                        colVal = '#FCB5B1'; // Red
-                                    } else {
-                                        colVal = '#f61509'; // dark Red
-                                    }
-                                    return colVal;
-                                },
-                                generateLabelTextFn: function(recordData) {
-                                  return (recordData.TaskEstimates === null ? 0 : recordData.TaskEstimates) + ' / ' + (recordData.Capacity === null ? 0 : recordData.Capacity);
-                                }
-
-                            })
+                            renderer: function(value) {
+                              return value;
+                            }
+                        //     xtype: 'templatecolumn',
+                        //     tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
+                        //         percentDoneName: 'PointLoad',
+                        //         calculateColorFn: function(recordData) {
+                        //             var loadval = recordData.pointLoad;
+                        //             if (loadval < 0.8) {
+                        //                 colVal = '#B2E3B6'; // Green
+                        //             } else if (loadval <= 1.0) {
+                        //                 colVal = '#006600'; // Dark Green
+                        //             } else if (loadval < 1.25) {
+                        //                 colVal = '#FCB5B1'; // Red
+                        //             } else {
+                        //                 colVal = '#f61509'; // dark Red
+                        //             }
+                        //             return colVal;
+                        //         },
+                        //         generateLabelTextFn: function(recordData) {
+                        //           return recordData.pointEst + ' / ' + recordData.capacityPts;
+                        //         }
+                        //     })
+                        // }, {
+                        //     text: 'Task Est Load',
+                        //     width: 60,
+                        //     align: 'center',
+                        //     xtype: 'templatecolumn',
+                        //     tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
+                        //         percentDoneName: 'Load',
+                        //         calculateColorFn: function(recordData) {
+                        //             var loadval = recordData.taskLoad;
+                        //             if (loadval < 0.8) {
+                        //                 colVal = '#B2E3B6'; // Green
+                        //             } else if (loadval <= 1.0) {
+                        //                 colVal = '#006600'; // Dark Green
+                        //             } else if (loadval < 1.25) {
+                        //                 colVal = '#FCB5B1'; // Red
+                        //             } else {
+                        //                 colVal = '#f61509'; // dark Red
+                        //             }
+                        //             return colVal;
+                        //         },
+                        //         generateLabelTextFn: function(recordData) {
+                        //           return (recordData.TaskEstimates === null ? 0 : recordData.TaskEstimates) + ' / ' + (recordData.Capacity === null ? 0 : recordData.Capacity);
+                        //         }
+                        //
+                        //     })
                         }]
                     });
                     app = this;
