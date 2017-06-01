@@ -196,7 +196,7 @@ Ext.define('CustomApp', {
                             tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
                                 percentDoneName: 'pointLoad',
                                 calculateColorFn: function(recordData) {
-                                  debugger;
+                                  //debugger;
                                     var loadval = recordData.pointLoad;
                                     if (loadval > 0 && loadval <= 0.8) {
                                         colVal = '#B2E3B6'; // Green
@@ -210,7 +210,7 @@ Ext.define('CustomApp', {
                                     return colVal;
                                 },
                                 generateLabelTextFn: function(recordData) {
-                                  debugger;
+                                  //debugger;
                                   if (recordData.capacityPts > -1) {
                                     return recordData.pointEst + ' / ' + recordData.capacityPts;
                                   } else {
