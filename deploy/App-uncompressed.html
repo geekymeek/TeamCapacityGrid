@@ -42,10 +42,13 @@ Ext.define('CustomApp', {
               pageSize: 200
           });
           // load UserIterationCapacity store
+          // if user has a capacity record, but has not set their capacity
+          // Capacity and Load values will = null
           capacityStore.load().then({
               success: function(capacities) {
                // define store for UserStories
                 console.log('capacityStore.load promise success');
+                console.log(capacities);
                 var storyStore = Ext.create('Rally.data.wsapi.Store', {
                       model: 'User Story',
                       fetch: ['Owner', 'PlanEstimate'],
@@ -57,25 +60,40 @@ Ext.define('CustomApp', {
                 });
                 //load UserStories store
                 storyStore.load().then({
+
                   success: function(stories) {
                     console.log('storyStore load promise success');
+                    console.log(stories);
 
                     // an array to hold custom user iteration capacity objects
                     var pointTotals = [];
                     var index;
 
-                    //created custom display records for people w/defined capacites
-                    // _.each(capacities, function(uic) {
-                    //   c_uic = new Object();
-                    //   c_uic.name = uic.get('User')._refObjectName;
-                    //   c_uic.capacityHrs = uic.get('Capacity');
-                    //   c_uic.taskEst = uic.get('TaskEstimates');
-                    //   c_uic.taskLoad = uic.get('Load');
-                    //   c_uic.capacityPts = Ext.util.Format.round(uic.get('Capacity') / 6, 1);
-                    //   c_uic.pointEst = 0; //will be calcuated later
-                    //   c_uic.pointLoad = 0.01; ////will be updated later
-                    //   pointTotals.push(c_uic);
-                    // });
+                    //create a custom capacity ojb for each UIC that exists
+                    _.each(capacities, function(capacity){
+                      c_uic = new Object();
+                      c_uic.name = capacity.get('User')._refObjectName;
+                      if (capacity.get('Capacity') !== null) {
+                        c_uic.capacityHrs = capacity.get('Capacity');
+                        c_uic.capacityPts = Ext.util.Format.round(capacity.get('Capacity') / 6, 1);
+                      } else {
+                        c_uic.capacityHrs = -1;
+                        c_uic.capacityPts = -1;
+                      }
+                      if (capacity.get('TaskEstimates') !== null) {
+                        c_uic.taskEst = capacity.get('TaskEstimates');
+                      } else {
+                        c_uic.taskEst = -1;
+                      }
+                      if (capacity.get('Load') !== null) {
+                        c_uic.taskLoad = capacity.get('Load');
+                      } else {
+                        c_uic.taskLoad = -1;
+                      }
+                      c_uic.pointEst = 0;
+                      c_uic.pointLoad = 0;
+                      pointTotals.push(c_uic);
+                    });
 
                     //iterate over UserStories store, tallying points by owner
                     _.each(stories, function(story) {
@@ -108,10 +126,10 @@ Ext.define('CustomApp', {
                         c_uic.name = ownerName;
                         c_uic.pointEst = pointval;
                         c_uic.taskEst = 0;
-                        c_uic.capacityHrs = 0;
-                        c_uic.capacityPts = 0;
-                        c_uic.pointLoad = 0.01;
-                        c_uic.taskLoad = 0.01;
+                        c_uic.capacityHrs = -1;
+                        c_uic.capacityPts = -1;
+                        c_uic.pointLoad = -1;
+                        c_uic.taskLoad = -1;
                         pointTotals.push(c_uic);
                       } else {
                         //update c_uic obj with new point total
@@ -119,30 +137,32 @@ Ext.define('CustomApp', {
                       }
                     });
                     // end _.each
-                    console.log(pointTotals);
+                    //console.log(pointTotals);
 
-                    pointTotals.forEach(function(currentValue){
+                    pointTotals.forEach(function(currentValue) {
                       //see if model/record exists in rally capacity store using findBy
                       //debugger;
-                      var result = capacityStore.findBy(function(record) {
-                        if(record.get('User')._refObjectName === currentValue.name) {
-                          return true;
-                        } else {
-                          return false;
+                      // var result = capacityStore.findBy(function(record) {
+                      //   if(record.get('User')._refObjectName === currentValue.name) {
+                      //     return true;
+                      //   } else {
+                      //     return false;
+                      //   }
+                      // });
+                      // if (result !== -1) { //result contains index of record in store
+                        // if (capacityStore.getAt(result).get('Capacity') > 0) {
+                        //   currentValue.capacityHrs = capacityStore.getAt(result).get('Capacity');
+                        // } else {
+                        //   currentValue.capacityHrs = 0;
+                        // }
+                        // currentValue.taskEst = capacityStore.getAt(result).get('TaskEstimates');
+                        // currentValue.taskLoad = capacityStore.getAt(result).get('Load');
+                        if (currentValue.capacityPts > 0) {
+                            currentValue.pointLoad = (currentValue.pointEst * 6) / currentValue.capacityHrs;
                         }
-                      });
-                      if (result !== -1) { //result contains index of record in store
-                        currentValue.capacityHrs = capacityStore.getAt(result).get('Capacity');
-                        currentValue.taskEst = capacityStore.getAt(result).get('TaskEstimates');
-                        currentValue.taskLoad = capacityStore.getAt(result).get('Load');
-                        currentValue.capacityPts = Ext.util.Format.round(capacityStore.getAt(result).get('Capacity') / 6, 1);
-                        currentValue.pointLoad = (currentValue.pointEst * 6) / capacityStore.getAt(result).get('Capacity');
-                      }
                     });
                     //debugger;
-                    console.log(pointTotals);
-
-
+                    //console.log(pointTotals);
 
                     //now setup the display object
                     if (this._myGrid) {
@@ -150,9 +170,13 @@ Ext.define('CustomApp', {
                     }
                     //debugger;
                     var cstore = Ext.create('Rally.data.custom.Store', {
-                      data: pointTotals
+                      data: pointTotals,
+                      sorter: [{
+                          property: 'name',
+                      }]
                     });
                     cstore.loadData(pointTotals);
+                    console.log('custom store load sucesss');
                     console.log(cstore);
                     //debugger;
                     this._myGrid = Ext.create('Rally.ui.grid.Grid', {
@@ -172,12 +196,13 @@ Ext.define('CustomApp', {
                             tpl: Ext.create('Rally.ui.renderer.template.progressbar.ProgressBarTemplate', {
                                 percentDoneName: 'pointLoad',
                                 calculateColorFn: function(recordData) {
+                                  debugger;
                                     var loadval = recordData.pointLoad;
-                                    if (loadval < 0.8) {
+                                    if (loadval > 0 && loadval <= 0.8) {
                                         colVal = '#B2E3B6'; // Green
-                                    } else if (loadval <= 1.0) {
+                                    } else if (loadval > 0.8 && loadval <= 1.0) {
                                         colVal = '#006600'; // Dark Green
-                                    } else if (loadval < 1.25) {
+                                    } else if (loadval > 1.0 && loadval < 1.25) {
                                         colVal = '#FCB5B1'; // Red
                                     } else {
                                         colVal = '#f61509'; // dark Red
@@ -185,7 +210,12 @@ Ext.define('CustomApp', {
                                     return colVal;
                                 },
                                 generateLabelTextFn: function(recordData) {
-                                  return recordData.pointEst + ' / ' + recordData.capacityPts;
+                                  debugger;
+                                  if (recordData.capacityPts > -1) {
+                                    return recordData.pointEst + ' / ' + recordData.capacityPts;
+                                  } else {
+                                    return  recordData.pointEst + ' / ' + '?';
+                                  }
                                 }
                             })
                         }, {
@@ -209,7 +239,7 @@ Ext.define('CustomApp', {
                                     return colVal;
                                 },
                                 generateLabelTextFn: function(recordData) {
-                                  return (recordData.taskEst === null ? 0 : recordData.taskEst) + ' / ' + (recordData.capacityHrs === null ? 0 : recordData.capacityHrs);
+                                  return (recordData.taskEst === -1 ? 0 : recordData.taskEst) + ' / ' + (recordData.capacityHrs === -1 ? 0 : recordData.capacityHrs);
                                 }
                             })
                         }]
