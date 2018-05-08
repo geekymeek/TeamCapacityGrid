@@ -12,7 +12,7 @@ Ext.define('CustomApp', {
         '<input type="button" style="text-align:right;float:right;" value="Refresh" onClick="javascript: app.onScopeChange();"/></div>' +
         '</td></tr></table>',
     comboboxConfig: {
-        fieldLabel: 'Select an Iteration:</div>',
+        fieldLabel: 'Select Iteration:</div>',
         width: 400
     },
     onScopeChange: function() {
@@ -193,6 +193,7 @@ Ext.define('CustomApp', {
                                         colVal = '#B2E3B6'; // Green
                                     } else if (loadval > 0.8 && loadval <= 1.0) {
                                         colVal = '#006600'; // Dark Green
+                                        //colVal = '#B2E3B6'; // Green
                                     } else if (loadval > 1.0 && loadval < 1.25) {
                                         colVal = '#FCB5B1'; // Red
                                     } else {
